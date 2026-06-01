@@ -33,7 +33,7 @@ jobs:
 
           echo "Moving to application directory..."
 
-          cd /home/ec2-user/nginx-rotate-app
+          cd /home/ec2-user/nginx-rotate-app-
 
           echo "Pulling latest code..."
 
