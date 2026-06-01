@@ -1,24 +1,64 @@
-name: Deploy Local Docker
+name: Deploy To EC2
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
 
 jobs:
   deploy:
-    runs-on: self-hosted
+
+    runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
 
-    - name: Build Docker Image
-      run: docker build -t my-local-app .
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-    - name: Stop old container
-      run: |
-        docker stop my-app || true
-        docker rm my-app || true
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
 
-    - name: Run container
-      run: docker run -d -p 5000:5000 --name my-app my-local-app
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+
+          chmod 600 ~/.ssh/id_rsa
+
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy Application
+        run: |
+          ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+
+          set -e
+
+          echo "Moving to application directory..."
+
+          cd /home/ec2-user/nginx-rotate-app
+
+          echo "Pulling latest code..."
+
+          git pull origin main
+
+          echo "Copying HTML files to NGINX..."
+
+          sudo cp webpages/*.html /usr/share/nginx/html/
+
+          echo "Creating default index.html symlink..."
+
+          sudo ln -sf /usr/share/nginx/html/index1.html \
+                      /usr/share/nginx/html/index.html
+
+          echo "Restarting rotation process..."
+
+          chmod +x webpages/rotate_pages.sh
+          chmod +x start_rotation.sh
+
+          ./start_rotation.sh
+
+          echo "Reloading NGINX..."
+
+          sudo nginx -s reload || sudo nginx
+
+          echo "Deployment completed successfully."
+
+          EOF
