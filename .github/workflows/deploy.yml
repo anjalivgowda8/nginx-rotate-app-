@@ -51,9 +51,10 @@ jobs:
           echo "Restarting rotation process..."
 
           chmod +x webpages/rotate_pages.sh
+          chmod +x /usr/share/nginx/html/rotate_pages.sh
           chmod +x start.sh
 
-          ./start.sh
+          sudo ./start.sh
 
           echo "Reloading NGINX..."
 
