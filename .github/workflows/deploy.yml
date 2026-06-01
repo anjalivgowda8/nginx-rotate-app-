@@ -51,9 +51,9 @@ jobs:
           echo "Restarting rotation process..."
 
           chmod +x webpages/rotate_pages.sh
-          chmod +x start_rotation.sh
+          chmod +x start.sh
 
-          ./start_rotation.sh
+          ./start.sh
 
           echo "Reloading NGINX..."
 
