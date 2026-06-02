@@ -1,4 +1,3 @@
-This runs BOTH nginx + rotation
 #!/bin/bash
 
 echo "Starting page rotation..."
