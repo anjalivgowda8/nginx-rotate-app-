@@ -54,7 +54,7 @@ jobs:
           sudo chmod +x /usr/share/nginx/html/rotate_pages.sh
           chmod +x start.sh
 
-          sudo ./start.sh
+          sudo bash ./start.sh
 
           echo "Reloading NGINX..."
 
