@@ -7,59 +7,56 @@ on:
 
 jobs:
   deploy:
-
     runs-on: ubuntu-latest
 
     steps:
-
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Configure SSH
+      - name: Setup SSH Key
         run: |
           mkdir -p ~/.ssh
-
           echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
-
           chmod 600 ~/.ssh/id_rsa
-
           ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Deploy Application
+      - name: Deploy to EC2
         run: |
-          ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
 
           set -e
 
-          echo "Moving to application directory..."
+          echo "===== STARTING DEPLOYMENT ====="
 
-          cd /home/ubuntu/nginx-rotate-app-
+          APP_DIR="/home/ubuntu/nginx-rotate-app-"
+
+          # Create directory if not exists
+          if [ ! -d "$APP_DIR" ]; then
+            echo "Cloning repository..."
+            git clone https://github.com/anjalivgowda8/nginx-rotate-app-.git $APP_DIR
+          fi
+
+          cd $APP_DIR
 
           echo "Pulling latest code..."
-
           git pull origin main
 
-          echo "Copying HTML files to NGINX..."
+          echo "Checking Docker..."
+          if ! command -v docker &> /dev/null
+          then
+            echo "Docker not found. Installing..."
+            sudo apt update -y
+            sudo apt install -y docker.io docker-compose-v2
+            sudo systemctl enable docker
+            sudo systemctl start docker
+          fi
 
-          sudo cp webpages/*.html /usr/share/nginx/html/
+          echo "Stopping old containers..."
+          sudo docker compose down || true
 
-          echo "Creating default index.html symlink..."
+          echo "Building and starting new containers..."
+          sudo docker compose up -d --build
 
-          sudo ln -sf /usr/share/nginx/html/index1.html \
-                      /usr/share/nginx/html/index.html
-
-          echo "Restarting rotation process..."
-
-          chmod +x webpages/rotate_pages.sh
-          sudo chmod +x /usr/share/nginx/html/rotate_pages.sh
-          chmod +x start.sh
-
-          sudo bash ./start.sh
-
-          echo "Reloading NGINX..."
-
-          sudo nginx -s reload || sudo nginx
-
-          echo "Deployment completed successfully."
+          echo "===== DEPLOYMENT COMPLETED ====="
 
           EOF
